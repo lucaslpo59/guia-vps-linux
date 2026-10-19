@@ -1,0 +1,28 @@
+# /etc/systemd/system/minha-api.service
+[Unit]
+Description=API do projeto (Node.js)
+After=network-online.target mysql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=minha-api
+Group=minha-api
+WorkingDirectory=/opt/minha-api
+EnvironmentFile=/opt/minha-api/.env
+ExecStart=/usr/bin/node server.js
+
+Restart=on-failure
+RestartSec=5
+# Se reiniciar 5 vezes em 1 minuto, para de tentar (evita loop infinito)
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Proteções: sistema somente leitura, sem acesso a /home, sem ganhar privilégios
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

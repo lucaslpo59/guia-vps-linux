@@ -1,0 +1,2 @@
+*.sh text eol=lf
+exemplos/post-receive text eol=lf

@@ -1,0 +1,16 @@
+# /etc/fail2ban/jail.local
+[DEFAULT]
+# Seu IP fixo (ou faixa) para não ser bloqueado por engano
+ignoreip = 127.0.0.1/8 ::1 198.51.100.7
+
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+
+# Reincidente fica bloqueado cada vez por mais tempo
+bantime.increment = true
+bantime.maxtime   = 1w
+
+[sshd]
+enabled = true
+backend = systemd

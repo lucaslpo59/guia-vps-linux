@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Hook do git: publica a branch main a cada push.
+# Vai em /srv/git/projeto.git/hooks/post-receive (com chmod +x).
+
+set -euo pipefail
+
+REPO=/srv/git/projeto.git
+DESTINO=/opt/projeto
+BRANCH=main
+SERVICO=minha-api
+
+while read -r antigo novo ref; do
+  [ "$ref" = "refs/heads/$BRANCH" ] || continue
+
+  echo ">> publicando $(git --git-dir="$REPO" log -1 --format='%h %s' "$novo")"
+
+  mkdir -p "$DESTINO"
+  git --work-tree="$DESTINO" --git-dir="$REPO" checkout -f "$BRANCH"
+  # Apaga o que saiu do repositório. Sem -x: .env e uploads (no .gitignore) ficam.
+  git --work-tree="$DESTINO" --git-dir="$REPO" clean -fd
+
+  # Reinstala dependências no primeiro push ou quando o package.json mudou
+  if [[ "$antigo" =~ ^0+$ ]] || [ ! -d "$DESTINO/node_modules" ] ||
+     git --git-dir="$REPO" diff --name-only "$antigo" "$novo" | grep -q '^package\(-lock\)\?\.json$'; then
+    echo ">> instalando dependências"
+    (cd "$DESTINO" && npm ci --omit=dev)
+  fi
+
+  echo ">> reiniciando $SERVICO"
+  sudo systemctl restart "$SERVICO"
+  sleep 2
+  if systemctl is-active --quiet "$SERVICO"; then
+    echo ">> ok, $SERVICO no ar"
+  else
+    echo ">> ERRO: $SERVICO não subiu. Últimas linhas do log:"
+    journalctl -u "$SERVICO" -n 20 --no-pager
+    exit 1
+  fi
+done
